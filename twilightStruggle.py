@@ -58,7 +58,9 @@ SITUATIONS = {
         "U2 Incident":              [ False, "Soviet Union", "Temporary"],
         "Flower Power":             [ False, "Soviet Union", "Permanent"],
         "Quagmire":                 [ False, "Soviet Union", "Permanent"],
+        "Willy Brandt":             [ False, "Soviet Union", "Permanent"],
         "Bear Trap":                [ False, "U.S.A.", "Permanent"],
+
         # Late War
         "AWACS Sale to Saudis":     [ False, "U.S.A.", "Permanent"],
         "North Sea Oil":            [ False, "U.S.A.", "Permanent"]
@@ -1361,6 +1363,105 @@ def cardCode(Card):
             print("The oil reserves found in the North Sea are satisfying the demand for gasoline!")
 
 
+    elif Card == "Che":
+        swapSides("Soviet Union")
+        print("Che has risen! The revolution is staged in...")
+
+        doubleCoup = coupAction(CARDS["Che"][1], "Normal", "Che", True)
+        if doubleCoup == True: # If US influence is removed, repeat the coup
+            x = coupAction(CARDS["Che"][1], "Normal", "Che", True) # Placeholder variable to soak the result
+
+        swapSides(FACTION[phasingPlayer]) 
+
+
+    elif Card == "Portuguese Empire Crumbles":
+        COUNTRIES["Angola"][0][1] += 2
+        COUNTRIES["SE African States"][0][1] += 2
+        print("The colonial slave masters have lost power within Africa.")
+
+
+    elif Card == "South African Unrest":
+        swapSides("Soviet Union")
+        choice = input("#[1] Add 1 USSR influence to South Africa and 2 in an adjacent country, or #[2] Add 2 USSR influence to South Africa.")
+        while choice != "1" and choice != "2":
+            choice = input("Input error. Please try again. Enter [1] or [2].")
+
+        if choice == "1":
+            COUNTRIES["South Africa"][0][1] += 1
+            for x in range(2):
+                target = input("Add influence to [A]ngola or [B]otswana:\n")
+                while target != "B" and choice != "b" and choice != "A" and choice != "a":
+                    target = input("ERROR. Invalid input. Enter [A] or [B]:\n")
+
+                if target == "A" or target == "a":
+                    COUNTRIES["Angola"][0][1] += 1
+                elif target == "B" or target == "b":
+                    COUNTRIES["Botswana"][0][1] += 1
+            print("Unrest in South Africa is boiling over to adjacent countries!")
+
+        elif choice == "2":
+            COUNTRIES["South Africa"][0][1] += 2
+            print("Riot police in South Africa cannot get a handle on the situation!")
+
+        swapSides(FACTION[phasingPlayer]) 
+
+
+    elif Card == "Willy Brandt":
+        earnVP(-1)
+        COUNTRIES["West Germany"][0][1] += 1
+        SITUATIONS["Willy Brandt"][0] = True
+        print("Willy Brandt promises the reunification of Germany!")
+    
+
+    elif Card == "Liberation Theology":
+        addedCountries = []
+        for markers in range(3):
+
+            doubleCheck = 1
+            print("Add 1 Soviet influence to any country in Central America, max 2 per country. ("+str(3-markers),"remaining):")
+            target = input("Enter country name: ")
+            while doubleCheck > 0: 
+
+                if target not in COUNTRIES.keys():
+                    print("ERROR. COUNTRY NOT FOUND. TRY AGAIN. \n")
+                    target = input("Enter country name: ")
+                    doubleCheck += 1
+
+                elif "Central America" not in COUNTRIES[target][3]:
+                    print("ERROR. That country is not in Central America. Try another.\n")
+                    target = input("Enter country name: ")
+                    doubleCheck += 1
+                    
+                elif addedCountries.count(target) >= 2:
+                    print("ERROR. You've added the limit of 2 USSR influence to %s. Try another.\n" % (target))
+                    target = input("Enter country name: ")
+                    doubleCheck += 1
+
+                doubleCheck -= 1
+                
+            COUNTRIES[target][0][1] += 1
+            addedCountries.append(target)
+            checkControl(COUNTRIES, target)
+
+        print("Influential debaters have made many catholic nations re-interpret the intentions of Jesus Christ.")
+
+
+    elif Card == "Allende":
+        COUNTRIES["Chile"][0][1] += 2
+        print("Allende has nationalized the industries of Chile.")
+
+
+    elif Card == "Lone Gunman":
+        print("|-/ A Lone Gunman caused chaos within the U.S.: \-|")
+        for card in HANDS[0]:
+            print(card)
+        print("")
+
+        swapSides("Sovet Union")
+        conductOperations(["R","S","I","C"], CARDS[Card] , Card, 1, True, False)
+        swapSides(FACTION[phasingPlayer])
+
+
     # Doublecheck influence situation with all countries
     checkControl(COUNTRIES, "All")
     if CARDS[Card][-1] == True and cardConditionTriggered == True:
@@ -1369,7 +1470,9 @@ def cardCode(Card):
         return False # Discard non-starred card, or starred card whose condition wasn't met.
     
 
-
+# Realign Action.
+# -- Number of rerolls dependent on operations.
+# -- cardName is self explanatory.
 def realignmentAction(operations, cardName):
     countriesRealigned = [] # Track countries for China Card bonus
     ChinaInfluence = False
@@ -1391,6 +1494,17 @@ def realignmentAction(operations, cardName):
                 print("DEFCON DENIED. YOU MAY NOT COUP/REALIGN IN THIS REGION. RE-TRY: \n")
                 target = input("Choose target country to realign: \n")
                 doubleCheck += 1
+
+            # NATO Prevents Realignment. De Gaulle and Willy opens up France/West Germany though
+            if currentPlayer == 1 and "Europe" in COUNTRIES[target][3] and SITUATIONS["NATO"][0] == True:
+                if target == "France" and SITUATIONS["De Gaulle Leads France"][0] == True:
+                    pass
+                elif target == "West Germany" and SITUATIONS["Willy Brandt"][0] == True:
+                    pass
+                else:
+                    print("WARNING: NATO IN EFFECT. USSR MAY NOT COUP/REALIGN IN EUROPE. RE-TRY: \n")
+                    target = input("Choose target country to coup: \n")
+                    doubleCheck += 1     
 
             if ChinaInfluence == True and "Asia" not in COUNTRIES[target][3]:
                 print("ERROR. BONUS REALIGN FROM CHINA CARD MUST GO TO ASIA. TRY AGAIN: \n")
@@ -1603,7 +1717,7 @@ def conductOperations(ActionsPermitted, card, cardName, cardOps, recursionDiscar
             legalCountries = acknowledgeAdjacency( currentPlayer ) # ! Will break rules for leapfrogging. Adjacency only checked start of turn.
             influenceAction( cardOps, legalCountries, cardName )
         elif chooseAction == "C":
-            coupAction( cardOps, "Normal", cardName )
+            coupAction( cardOps, "Normal", cardName, False )
 
         if enemyEvent == True:
             removeCard = cardCode( cardName )
@@ -1668,8 +1782,11 @@ def influenceAction(operations, legalCountries, cardName):
                 countriesInfluenced.append("CHINA") # Important. This stops China Card giving infinite bonus ops
                 print(countriesInfluenced)
         
-# Attempt a coup. Coup strength is given through operations. 'coupType' - Most coups are "Normal", but cards like Junta provide "Free" coups.
-def coupAction(operations, coupType, cardName):
+# Attempt a coup. 
+# -- Coup strength is given through operations. 
+# -- 'coupType' - Most coups are "Normal", but cards like Junta provide "Free" coups.
+# -- eventCoup - Events that need the code of a coup, but with restrictions (I.E. 'Che'). False boolean normally, true boolean if special
+def coupAction(operations, coupType, cardName, eventCoup):
     global DEFCON
 
     target = input("Choose target country to coup: \n")
@@ -1690,6 +1807,24 @@ def coupAction(operations, coupType, cardName):
                 (DEFCON < 4 and "Asia" in COUNTRIES[target][3]) or
                 (DEFCON < 3 and "Middle East" in COUNTRIES[target][3]) ) and coupType != "Free":
             print("DEFCON RESTRICTED. YOU MAY NOT COUP/REALIGN IN THIS REGION. RE-TRY: \n")
+            target = input("Choose target country to coup: \n")
+            doubleCheck += 1
+
+        # NATO prevents couping in Europe. De Gaulle and Willy Brandt are exceptions, if they are active.
+        if currentPlayer == 1 and "Europe" in COUNTRIES[target][3] and SITUATIONS["NATO"][0] == True:
+            if target == "France" and SITUATIONS["De Gaulle Leads France"][0] == True:
+                pass
+            elif target == "West Germany" and SITUATIONS["Willy Brandt"][0] == True:
+                pass
+            else:
+                print("WARNING: NATO IN EFFECT. USSR MAY NOT COUP/REALIGN IN EUROPE. RE-TRY: \n")
+                target = input("Choose target country to coup: \n")
+                doubleCheck += 1            
+
+        # Che's coups are just like normal ones - but with additional restrictions and a parameter
+        if cardName == "Che" and eventCoup == True and (COUNTRIES[target][2] == True or 
+            "Europe" in COUNTRIES[target][3] or "Asia" in COUNTRIES[target][3] or "Middle East" in COUNTRIES[target][3]):
+            print("ERROR. Che cannot lead a revolution in %s. Re-try:" % target)
             target = input("Choose target country to coup: \n")
             doubleCheck += 1
 
@@ -1727,6 +1862,14 @@ def coupAction(operations, coupType, cardName):
     if coupType != "Free":
         MILOPS[currentPlayer] += operations # Earn Milops if it wasn't a free coup
     checkControl(COUNTRIES, target)
+
+    # 'Che' code. If coup success, return boolean to repeat coup
+    if cardName == "Che" and eventCoup == True and power > 0:
+        print("Che's charisma has inspired the workers of the world!")
+        return True
+    elif cardName == "Che" and eventCoup == True and power <= 0:
+        print("Che's warcrimes have surfaced. People of the world are hesitant to follow his ideology.")
+        return False
     
 
 ######## AUXILIARY FUNCTIONS #########

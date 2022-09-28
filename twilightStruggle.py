@@ -42,12 +42,12 @@ MILOPS = {
 # When they're in play, turn it on with "True". Faction whose event it belongs to. Permanent or expires on end of turn.
 SITUATIONS = {
         # Early War
+        "Vietnam Revolts":          [ False, "Soviet Union", "Temporary"],
         "De Gaulle Leads France":   [ False, "Soviet Union", "Permanent"],
         "Warsaw Pact Formed":       [ False, "Soviet Union", "Permanent"],
-        "Vietnam Revolts":          [ False, "Soviet Union", "Temporary"],
+        "Containment":              [ False, "U.S.A.", "Temporary"],
         "Marshall Plan":            [ False, "U.S.A.", "Permanent"],
         "NATO":                     [ False, "U.S.A.", "Permanent"],
-        "Containment":              [ False, "U.S.A.", "Temporary"],
         "US/Japan Mutual Defense Pact": [ False, "U.S.A.", "Permanent"],
         "Formosan Resolution":      [ False, "U.S.A.", "Permanent"],
         "NORAD":                    [ False, "U.S.A.", "Permanent"],
@@ -59,7 +59,11 @@ SITUATIONS = {
         "Flower Power":             [ False, "Soviet Union", "Permanent"],
         "Quagmire":                 [ False, "Soviet Union", "Permanent"],
         "Willy Brandt":             [ False, "Soviet Union", "Permanent"],
+        "Nuclear Subs":             [ False, "U.S.A.", "Temporary"],
         "Bear Trap":                [ False, "U.S.A.", "Permanent"],
+        "Shuttle Diplomacy":        [ False, "U.S.A.", "Permanent"],
+        "Camp David Accords":       [ False, "U.S.A.", "Permanent"],
+        "John Paul II Elected Pope":[ False, "U.S.A.", "Permanent"],
 
         # Late War
         "AWACS Sale to Saudis":     [ False, "U.S.A.", "Permanent"],
@@ -760,7 +764,7 @@ def cardCode(Card):
         for markers in range(4):
 
             doubleCheck = 1
-            print("Add an influence to a non-US controlled country in Africa or Southeast Asia ("+str(4-markers),"remaining):")
+            print("Add 1 USSR influence to a country in Africa or Southeast Asia ("+str(4-markers),"remaining):")
             target = input("Enter country name: ")
             while doubleCheck > 0: # 
 
@@ -771,11 +775,6 @@ def cardCode(Card):
 
                 elif "Africa" not in COUNTRIES[target][3] and "Southeast Asia" not in COUNTRIES[target][3]:
                     print("ERROR. That country is not in Africa/SE Asia. Try another.\n")
-                    target = input("Enter country name: ")
-                    doubleCheck += 1
-
-                elif COUNTRIES[target][3] == "U.S.A.":
-                    print("ERROR. The Americans control that country. Try another.\n")
                     target = input("Enter country name: ")
                     doubleCheck += 1
                     
@@ -1042,22 +1041,28 @@ def cardCode(Card):
 
 
     elif Card == "Arab-Israeli War":
-        enemyDefense = 0
-        for adjEnemyCountry in COUNTRIES["Israel"][-1]:
-            if COUNTRIES[adjEnemyCountry][4] == "U.S.A.":
-                enemyDefense += 1
+        if SITUATIONS["Camp David Accords"][0] != True: # Camp David blocks Arab
 
-        warResult = random.randint(1, 6)
-        print("DICE:" , str(warResult) )
-        if warResult > (3 + enemyDefense): # Victory
-            print("Muslim crusaders, backed by Soviet munition, have conquered Israel.")
-            COUNTRIES["Israel"][0][1] += COUNTRIES["Israel"][0][0]
-            COUNTRIES["Israel"][0][0] = 0
-            earnVP(-2)
+            enemyDefense = 0
+            for adjEnemyCountry in COUNTRIES["Israel"][-1]:
+                if COUNTRIES[adjEnemyCountry][4] == "U.S.A.":
+                    enemyDefense += 1
+
+            warResult = random.randint(1, 6)
+            print("DICE:" , str(warResult) )
+            if warResult > (3 + enemyDefense): # Victory
+                print("Muslim crusaders, backed by Soviet munition, have conquered Israel.")
+                COUNTRIES["Israel"][0][1] += COUNTRIES["Israel"][0][0]
+                COUNTRIES["Israel"][0][0] = 0
+                earnVP(-2)
+            else:
+                print("Within a week, Israel concluded the war still standing.")
+
+            MILOPS[1] += 2 # Create function for adding Milops IMO. Cant have more than 5.
+
         else:
-            print("Within a week, Israel concluded the war still standing.")
-
-        MILOPS[1] += 2 # Create function for adding Milops IMO. Cant have more than 5.
+            cardConditionTriggered = False
+            print("The Camp David Accords are maintaining the peace between Israel and the Muslim world.")
 
 
     elif Card == "Indo-Pakistani War":
@@ -1462,6 +1467,344 @@ def cardCode(Card):
         swapSides(FACTION[phasingPlayer])
 
 
+    elif Card == "Ussuri River Skirmish":
+        if CARDS["The China Card"][3] == "Soviet Union":
+            CARDS["The China Card"][3] = "U.S.A."
+            CARDS["The China Card"][4] = True
+        elif CARDS["The China Card"][3] == "U.S.A.":
+            swapSides("U.S.A.")
+
+            addedCountries = []
+            for markers in range(4):
+
+                doubleCheck = 1
+                print("Add 1 US to any country in Asia, max 2 per country. ("+str(4-markers),"remaining):")
+                target = input("Enter country name: ")
+                while doubleCheck > 0: 
+
+                    if target not in COUNTRIES.keys():
+                        print("ERROR. COUNTRY NOT FOUND. TRY AGAIN. \n")
+                        target = input("Enter country name: ")
+                        doubleCheck += 1
+
+                    elif "Asia" not in COUNTRIES[target][3]:
+                        print("ERROR. That country is not in Asia. Try another.\n")
+                        target = input("Enter country name: ")
+                        doubleCheck += 1
+                        
+                    elif addedCountries.count(target) >= 2:
+                        print("ERROR. You've added the limit of 2 US influence to %s. Try another.\n" % (target))
+                        target = input("Enter country name: ")
+                        doubleCheck += 1
+
+                    doubleCheck -= 1
+                    
+                COUNTRIES[target][0][0] += 1
+                addedCountries.append(target)
+                checkControl(COUNTRIES, target)
+
+
+            swapSides(FACTION[phasingPlayer])
+
+
+        print("Differences between the Russian and Chinese counterparts are creating a schism.") 
+
+
+    elif Card == "'Ask Not What Your Country…'":
+        swapSides("U.S.A.")  
+        for i, card in enumerate(HANDS[0]):
+            print("#" + str(i+1) , card)
+        print("\n" + CARDS[Card][0])
+
+        numDiscarded = 0
+        while True:
+            print("\n*.* Discard card #, OR [S]top: *.*")
+            choice = input("")
+
+            while choice != "S" or choice != "s" and (choice.isdigit() == False or int(choice) < 1 or int(choice) > len(HANDS[0])):
+                print("ERROR. Invalid input. Enter only the card's ordering number in your hand.")
+                choice = input("")
+
+            if "S" in choice or "s" in choice: # Player stopped discarding
+                break
+
+            cardName = HANDS[0][int(choice)-1]
+            discardCard(cardName, False, False)
+            numDiscarded += 1
+
+        if numDiscarded > 0:
+            drawCards(DRAW_PILE, numDiscarded, HANDS[0])
+
+        print("... can do for you... Ask what YOU can do for your country!")
+        swapSides(FACTION[phasingPlayer])    
+
+
+    elif Card == "Alliance for Progress":
+        BGcontrolled = 0
+        for latinCountry in COUNTRIES:
+            if latinCountry[2] == True and "America" in latinCountry[3] and latinCountry[4] == "U.S.A.":
+                BGcontrolled += 1
+
+        if BGcontrolled > 0:
+            earnVP(BGcontrolled)
+        else:
+            cardConditionTriggered = False
+
+        print("Monroe Doctrine echoes throughout the western hemisphere.")
+
+
+    elif Card == "Bear Trap":
+        SITUATIONS["Bear Trap"][0] = True
+        print("The Soviets are bogged down in Afghanistan!")
+
+
+    elif Card == "Shuttle Diplomacy":
+        SITUATIONS["Shuttle Diplomacy"][0] = True
+
+
+    elif Card == "The Voice of America":
+        swapSides("U.S.A.")
+        removedCountries = []
+        for markers in range(4):
+
+            doubleCheck = 1
+            print("Remove 1 Soviet influence from any non-European country, max 2 per country. ("+str(4-markers),"remaining):")
+            target = input("Enter country name: ")
+            while doubleCheck > 0: 
+
+                if target not in COUNTRIES.keys():
+                    print("ERROR. COUNTRY NOT FOUND. TRY AGAIN. \n")
+                    target = input("Enter country name: ")
+                    doubleCheck += 1
+
+                elif "Europe" in COUNTRIES[target][3]:
+                    print("ERROR. You may not remove influence from Europe. Try another.\n")
+                    target = input("Enter country name: ")
+                    doubleCheck += 1
+                    
+                elif removedCountries.count(target) >= 2:
+                    print("ERROR. You've removed the limit of 2 USSR influence from %s. Try another.\n" % (target))
+                    target = input("Enter country name: ")
+                    doubleCheck += 1
+
+                doubleCheck -= 1
+                
+            COUNTRIES[target][0][1] -= 1
+            removedCountries.append(target)
+            checkControl(COUNTRIES, target)
+
+        print("Underground radio stations tune into the un-filtered Western World.")
+        swapSides(FACTION[phasingPlayer])
+
+
+    elif Card == "Camp David Accords":
+        earnVP(1)
+        SITUATIONS["Camp David Accords"][0] = True
+        COUNTRIES["Israel"][0][0] += 1
+        COUNTRIES["Egypt"][0][0] += 1
+        COUNTRIES["Jordan"][0][0] += 1
+        print("President Carter has made historic in-grounds within the Middle East.")
+
+
+    elif Card == "Nixon Plays the China Card":
+        if CARDS["The China Card"][3] == "Soviet Union":
+            CARDS["The China Card"][3] = "U.S.A."
+            CARDS["The China Card"][4] = False
+        elif CARDS["The China Card"][3] == "U.S.A.":
+            earnVP(2)
+        print("China will prove to be an important powerhouse, according to Nixon.")
+
+
+    elif Card == "Nuclear Subs":
+        SITUATIONS["Nuclear Subs"][0] = True
+        print("Nautilus, the first Nuclear submarine, has launched itself from the Thames river.")
+
+
+    elif Card == "Colonial Rear Guards":
+        swapSides("U.S.A.")
+        addedCountries = []
+        for markers in range(4):
+
+            doubleCheck = 1
+            print("Add 1 US influence to a country in Africa or Southeast Asia ("+str(4-markers),"remaining):")
+            target = input("Enter country name: ")
+            while doubleCheck > 0: # 
+
+                if target not in COUNTRIES.keys():
+                    print("ERROR. COUNTRY NOT FOUND. TRY AGAIN. \n")
+                    target = input("Enter country name: ")
+                    doubleCheck += 1
+
+                elif "Africa" not in COUNTRIES[target][3] and "Southeast Asia" not in COUNTRIES[target][3]:
+                    print("ERROR. That country is not in Africa/SE Asia. Try another.\n")
+                    target = input("Enter country name: ")
+                    doubleCheck += 1
+                    
+                elif target in addedCountries:
+                    print("ERROR. You've already added one influence in that country with Colonials. Try another.\n")
+                    target = input("Enter country name: ")
+                    doubleCheck += 1
+
+                doubleCheck -= 1
+                
+            COUNTRIES[target][0][0] += 1
+            addedCountries.append(target)
+            checkControl(COUNTRIES, target)
+        swapSides(FACTION[phasingPlayer])
+
+
+    elif Card == "Puppet Governments":
+        swapSides("U.S.A.")
+        for markers in range(3):
+
+            doubleCheck = 1
+            print("Add 1 US influence to any country with no influence from either power ("+str(3-markers),"remaining):")
+            target = input("Enter country name: ")
+            while doubleCheck > 0: # 
+
+                if target not in COUNTRIES.keys():
+                    print("ERROR. COUNTRY NOT FOUND. TRY AGAIN. \n")
+                    target = input("Enter country name: ")
+                    doubleCheck += 1
+
+                elif COUNTRIES[target][0][0] > 0 or COUNTRIES[target][0][1] > 0:
+                    print("ERROR. THERE IS INFLUENCE IN THAT COUNTRY. TRY AGAIN. \n")
+                    target = input("Enter country name: ")
+                    doubleCheck += 1                    
+
+                doubleCheck -= 1
+                
+            COUNTRIES[target][0][0] += 1
+            checkControl(COUNTRIES, target)
+
+        print("The puppets are now in place, the seeds of a new generation shall germinate.")
+        swapSides(FACTION[phasingPlayer])
+
+
+    elif Card == "Grain Sales to Soviets": # THIS NEEDS DEBUGGING
+        swapSides("U.S.A.")
+        if len(HANDS[1]) > 1:
+            randomlyDrawn = HANDS[1][random.randint(0, len(HANDS[1])-1 )]
+            while randomlyDrawn == "Grain Sales to Soviets": # Do not randomly select and discard Grain Sales itself
+                randomlyDrawn = HANDS[1][random.randint(0, len(HANDS[1])-1 )]
+
+            randomlyDrawn = HANDS[1].index(randomlyDrawn) # Turn random card into its index - then remove it from the hand
+            cardPlanned = HANDS[1].pop(randomlyDrawn)
+            card = CARDS[cardPlanned]
+
+            print("Grain Sales has fished up %s." % (cardPlanned) )
+            print("*.* U.S. - play the card, or return it back to Soviet's hand and play Grain Sales for ops.")
+            returnOrPlay = input("ENTER: [P]lay or [R]eturn.")
+            while returnOrPlay != "P" and returnOrPlay != "p" and returnOrPlay != "R" and returnOrPlay != "r":
+                returnOrPlay = input("ERROR, INVALID INPUT. Enter [P] or [R].")
+
+            if returnOrPlay == "P" or returnOrPlay == "p":
+                conductOperations(["R","S","E","I","C"], card, cardPlanned, card[1], False, True)
+            else:
+                HANDS[1].append(cardPlanned)
+                card = CARDS["Grain Sales to Soviets"]
+                conductOperations(["R","S","E","I","C"], card, "Grain Sales to Soviets", card[1], True, False) 
+
+        else: # No card to be taken; so use Grain Sales itself to do ops
+            card = CARDS["Grain Sales to Soviets"]
+            conductOperations(["R","S","E","I","C"], card, "Grain Sales to Soviets", card[1], True, False) 
+            
+
+        swapSides(FACTION[phasingPlayer])
+    #dadw
+
+    elif Card == "John Paul II Elected Pope":
+        COUNTRIES["Poland"][0][1] -= 2
+        COUNTRIES["Poland"][0][0] += 1
+        SITUATIONS["John Paul II Elected Pope"][0] = True
+        checkControl(COUNTRIES, "Poland")
+        print("The Pope denounces Communism for being 'godless and immoral'!")
+
+
+    elif Card == "Our Man in Tehran":
+        swapSides("U.S.A.")
+        OMITcards = []
+
+        drawCards(DRAW_PILE, 5, OMITcards)
+        for i, card in enumerate(OMITcards):
+            print("#" + str(i+1) , card)
+        print("\n" + CARDS[Card][0])
+
+        while True:
+            print("\n*.* Discard card #, OR [S]top: *.*")
+            choice = input("")
+
+            while choice != "S" or choice != "s" and (choice.isdigit() == False or int(choice) < 1 or int(choice) > len(OMITcards)):
+                print("ERROR. Invalid input. Enter only the card's ordering number in your hand.")
+                choice = input("")
+
+            if "S" in choice or "s" in choice: # Player stopped discarding
+                break
+
+            cardName = OMITcards[int(choice)-1]
+            discardCard(cardName, False, False)
+
+        print("Our Man has informed us of Soviet plans.")
+        swapSides(FACTION[phasingPlayer])
+
+
+    elif Card == "OAS Founded":
+        swapSides("U.S.A.")
+        for markers in range(2):
+
+            doubleCheck = 1
+            print("Add 1 US influence to any country with in Central or South America ("+str(2-markers),"remaining):")
+            target = input("Enter country name: ")
+            while doubleCheck > 0:
+
+                if target not in COUNTRIES.keys():
+                    print("ERROR. COUNTRY NOT FOUND. TRY AGAIN. \n")
+                    target = input("Enter country name: ")
+                    doubleCheck += 1
+
+                elif "America" not in COUNTRIES[target][3]:
+                    print("ERROR. COUNTRY NOT IN AMERICAS. TRY AGAIN. \n")
+                    target = input("Enter country name: ")
+                    doubleCheck += 1                                       
+
+                doubleCheck -= 1
+                
+            COUNTRIES[target][0][0] += 1
+            checkControl(COUNTRIES, target)
+
+        print("May this be a sign for closer ties between the countries of America and the U.S.")
+        swapSides(FACTION[phasingPlayer])
+
+
+    elif Card == "Sadat Expels Soviets":
+        COUNTRIES["Egypt"][0][1] = 0
+        COUNTRIES["Egypt"][0][0] += 1
+        checkControl(COUNTRIES, "Egypt")
+        print("The Soviets are fleeing Egypt like plague locusts.")
+
+
+    elif Card == "Kitchen Debates":
+        BGcontrolled = [0, 0]
+        for country in COUNTRIES:
+            if country[2] == True and country[4] == "U.S.A.":
+                BGcontrolled[0] += 1
+            elif country[2] == True and country[4] == "Soviet Union":
+                BGcontrolled[1] += 1
+
+        if BGcontrolled[0] > BGcontrolled[1]:
+            earnVP(2)
+            print("Poke!")
+        else:
+            cardConditionTriggered = False
+
+
+    elif Card == "Panama Canal Returned":
+        COUNTRIES["Costa Rica"][0][0] += 1
+        COUNTRIES["Panama"][0][0] += 1
+        COUNTRIES["Venezuela"][0][0] += 1
+        print("The Panama Canal is returned to its rightful owner.")
+
+
     # Doublecheck influence situation with all countries
     checkControl(COUNTRIES, "All")
     if CARDS[Card][-1] == True and cardConditionTriggered == True:
@@ -1855,9 +2198,13 @@ def coupAction(operations, coupType, cardName, eventCoup):
     else:
         print("Coup has failed...")
 
-    if COUNTRIES[target][2] == True: # Degrade DEFCON if target is a Battleground
-        print("DEFCON reduced to", str(DEFCON-1) +"!\n")
-        reduceDEFCON(1)
+# Degrade DEFCON if target is a Battleground. 
+    if COUNTRIES[target][2] == True:
+        if currentPlayer == 0 and SITUATIONS["Nuclear Subs"][0] == True: # Nuclear subs prevents dropping DEFCON
+            pass
+        else:
+            print("DEFCON reduced to", str(DEFCON-1) +"!\n")
+            reduceDEFCON(1)
 
     if coupType != "Free":
         MILOPS[currentPlayer] += operations # Earn Milops if it wasn't a free coup
@@ -1951,11 +2298,11 @@ def drawCards(origin, number_drawn, destination):
             numb_drawn += 1
 
 
-# cardName - name of the card; recursionDiscard - Boolean, explained in a comment; removeCard - Boolean returned from cardCode
-def discardCard(cardName, recursionDiscard, removeCard):
+# cardName - name of the card; recursionDiscard - Boolean, explained in a comment; isCardRemoved - Boolean returned from cardCode
+def discardCard(cardName, recursionDiscard, isCardRemoved):
     card = CARDS[cardName]
     if recursionDiscard == False:   # If a card code has a seperate conductOperations function, do not "double" discard
-        if removeCard == True and card[-1] == True: # Remove Card if event was starred
+        if isCardRemoved == True and card[-1] == True: # Remove Card if event was starred
             REMOVED_PILE.append(cardName)
             HANDS[currentPlayer].remove(cardName)
         elif cardName == "The China Card":
@@ -2099,6 +2446,18 @@ def scoreRegion(Region):
                 opponent = 1
             elif player == 1:
                 opponent = 0
+
+        # Shuttle Diplomacy kicks in against the Soviets before checking presence
+            if player == 1 and SITUATIONS["Shuttle Diplomacy"] == True and (Region == "Asia" or Region == "Middle East"):
+                SITUATIONS["Shuttle Diplomacy"] = False
+                print("*.* Shuttle Diplomacy in %s! *.*" % (Region))
+                if BGcount[1] > 0:
+                    BGcount[1] -= 1
+                    VPSowed[1] -= 1
+                    countriesControlled[1] -= 1
+                    if Region == "Asia" and COUNTRIES["Japan"][4] == "Soviet Union": # Japan is denied, so no +1 VP from adj.
+                        VPSowed[1] -= 1
+
                 
             if (BGcount[player] == BGinRegion[Region] and
                 countriesControlled[player] > countriesControlled[opponent] ):

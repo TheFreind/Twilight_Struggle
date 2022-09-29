@@ -454,7 +454,10 @@ def cardCode(Card):
 
     if Card[-7:] == "Scoring": # All scoring cards go through a specialized function.
         scoringVP = scoreRegion(Card[:-8])
-        earnVP( scoringVP )
+        if scoringVP > 0: # Rare exception - scoring can go either way, must specificy if US or USSR
+            earnVP( scoringVP, 0 )
+        elif scoringVP < 0:
+            earnVP( abs(scoringVP), 1)
 
 ########################################
 ########### EARLY WAR CARDS ############
@@ -688,9 +691,9 @@ def cardCode(Card):
         swapSides(FACTION[phasingPlayer])
 
     elif Card == "Duck and Cover":
-        reduceDEFCON(1)
+        changeDEFCON(-1)
         print("Duck and cover, people!\nDEFCON NOW AT %d" % (DEFCON) )
-        earnVP( 5 - DEFCON )
+        earnVP( (5 - DEFCON) , 0)
 
 
     elif Card == "Red Scare/Purge":
@@ -708,14 +711,8 @@ def cardCode(Card):
 
 
     elif Card == "Nuclear Test Ban":
-        if currentPlayer == 0:
-            earnVP(DEFCON - 2)
-        elif currentPlayer == 1:
-            earnVP((DEFCON - 2)*-1)
-        
-        DEFCON += 2
-        if DEFCON > 5:
-            DEFCON = 5
+        earnVP((DEFCON - 2), currentPlayer)
+        changeDEFCON(2)
 
 
     elif Card == "Formosan Resolution":
@@ -888,7 +885,7 @@ def cardCode(Card):
 
         # U2 Incident will score Soviet player 1 VP for UN
         if SITUATIONS["U2 Incident"][0] == True:
-            earnVP(-1)
+            earnVP(1, 1)
             SITUATIONS["U2 Incident"][0] = False
             print("The UN have reviewed the recent U2 Incident on its gathering.")
 
@@ -965,7 +962,7 @@ def cardCode(Card):
                     target = input("Choose country: ")
 
                 COUNTRIES[target][0][0] += 2
-                earnVP(2)
+                earnVP(2, 0)
                 swapSides(FACTION[phasingPlayer])
                 print("The Anglo-sphere have a benevolent vision for Europe.")
 
@@ -1010,14 +1007,14 @@ def cardCode(Card):
                 SOVIETdice = random.randint(1, 6) + SOVIETmodifier
                 print("%s result: %d | %s result: %d" % ("U.S.A.", USAdice, "Soviet Union", SOVIETdice))
                 if USAdice > SOVIETdice:
-                    earnVP(2)
+                    earnVP(2, 0)
                     repeatRolls = False
                 elif SOVIETdice > USAdice:
-                    earnVP(-2)
+                    earnVP(2, 1)
                     repeatRolls = False
 
         elif decision == "B":
-            reduceDEFCON(1)
+            changeDEFCON(-1)
             conductOperations(["R","S","I","C"], CARDS[Card] , Card, 4, True, False)
             
 
@@ -1033,7 +1030,7 @@ def cardCode(Card):
             print("North Korea has annexed its southern brother! It is now whole again, unified under hammer & sickle.")
             COUNTRIES["South Korea"][0][1] += COUNTRIES["South Korea"][0][0]
             COUNTRIES["South Korea"][0][0] = 0
-            earnVP(-2)
+            earnVP(2, 1)
         else:
             print("The invasion has failed! U.S. troops alongside UN forces have secured the 38th parallel!")
 
@@ -1054,7 +1051,7 @@ def cardCode(Card):
                 print("Muslim crusaders, backed by Soviet munition, have conquered Israel.")
                 COUNTRIES["Israel"][0][1] += COUNTRIES["Israel"][0][0]
                 COUNTRIES["Israel"][0][0] = 0
-                earnVP(-2)
+                earnVP(2, 1)
             else:
                 print("Within a week, Israel concluded the war still standing.")
 
@@ -1081,10 +1078,8 @@ def cardCode(Card):
             print("Glittering idealogues, paid for in blood... %s now controls %s." % (FACTION[currentPlayer], target))
             COUNTRIES[target][0][currentPlayer] += COUNTRIES[target][0][otherPlayer]
             COUNTRIES[target][0][otherPlayer] = 0
-            if currentPlayer == 0:
-                earnVP(2)
-            elif currentPlayer == 1:
-                earnVP(-2)
+            earnVP(2, currentPlayer)
+
         else:
             print("The infighting over in the Indian sub-continent has resulted in no gains.")
 
@@ -1281,8 +1276,9 @@ def cardCode(Card):
 ########### MID WAR CARDS ##############
 ########################################
 
+# Bug -- As USA, triggering event and then using it for ops will instantly suffer -3 VP. Check must be done on NEXT turn 
     elif Card == "'We Will Bury You'":
-        reduceDEFCON(1)
+        changeDEFCON(-1)
         print("'Whether you like it or not, history is on our side. We will bury you!'\nDEFCON NOW AT %d" % (DEFCON) )
         SITUATIONS["'We Will Bury You'"][0] = True
 
@@ -1340,7 +1336,7 @@ def cardCode(Card):
     
     elif Card == "Cultural Revolution":
         if CARDS["The China Card"][3] == "Soviet Union":
-            earnVP(-1)
+            earnVP(1, 1)
         elif CARDS["The China Card"][3] == "U.S.A.":
             CARDS["The China Card"][3] = "Soviet Union"
             CARDS["The China Card"][4] = True
@@ -1358,8 +1354,7 @@ def cardCode(Card):
                     oilVP += 1
 
             if oilVP > 0:
-                oilVP = oilVP * (-1)
-                earnVP(oilVP)
+                earnVP(oilVP, 1)
                 print("The OPEC giants answer only to the Soviets.")
             else:
                 print("The West enjoy favorable prices of their precious oil.")
@@ -1412,7 +1407,7 @@ def cardCode(Card):
 
 
     elif Card == "Willy Brandt":
-        earnVP(-1)
+        earnVP(1, 1)
         COUNTRIES["West Germany"][0][1] += 1
         SITUATIONS["Willy Brandt"][0] = True
         print("Willy Brandt promises the reunification of Germany!")
@@ -1512,16 +1507,18 @@ def cardCode(Card):
 
     elif Card == "'Ask Not What Your Country…'":
         swapSides("U.S.A.")  
-        for i, card in enumerate(HANDS[0]):
-            print("#" + str(i+1) , card)
-        print("\n" + CARDS[Card][0])
 
         numDiscarded = 0
         while True:
+            for i, card in enumerate(HANDS[0]):
+                print("#" + str(i+1) , card)
+            print("\n" + CARDS[Card][0])
+
             print("\n*.* Discard card #, OR [S]top: *.*")
             choice = input("")
 
-            while choice != "S" or choice != "s" and (choice.isdigit() == False or int(choice) < 1 or int(choice) > len(HANDS[0])):
+            while ( HANDS[0][int(choice)-1] == "'Ask Not What Your Country…'" or choice != "S" and choice != "s" and 
+                (int(choice) < 1 or int(choice) > len(HANDS[0])) ):
                 print("ERROR. Invalid input. Enter only the card's ordering number in your hand.")
                 choice = input("")
 
@@ -1529,6 +1526,7 @@ def cardCode(Card):
                 break
 
             cardName = HANDS[0][int(choice)-1]
+            print("Discarded %s" % (cardName))
             discardCard(cardName, False, False)
             numDiscarded += 1
 
@@ -1546,7 +1544,7 @@ def cardCode(Card):
                 BGcontrolled += 1
 
         if BGcontrolled > 0:
-            earnVP(BGcontrolled)
+            earnVP(BGcontrolled, 0)
         else:
             cardConditionTriggered = False
 
@@ -1598,7 +1596,7 @@ def cardCode(Card):
 
 
     elif Card == "Camp David Accords":
-        earnVP(1)
+        earnVP(1, 0)
         SITUATIONS["Camp David Accords"][0] = True
         COUNTRIES["Israel"][0][0] += 1
         COUNTRIES["Egypt"][0][0] += 1
@@ -1611,7 +1609,7 @@ def cardCode(Card):
             CARDS["The China Card"][3] = "U.S.A."
             CARDS["The China Card"][4] = False
         elif CARDS["The China Card"][3] == "U.S.A.":
-            earnVP(2)
+            earnVP(2, 0)
         print("China will prove to be an important powerhouse, according to Nixon.")
 
 
@@ -1792,7 +1790,7 @@ def cardCode(Card):
                 BGcontrolled[1] += 1
 
         if BGcontrolled[0] > BGcontrolled[1]:
-            earnVP(2)
+            earnVP(2, 0)
             print("Poke!")
         else:
             cardConditionTriggered = False
@@ -1804,6 +1802,51 @@ def cardCode(Card):
         COUNTRIES["Venezuela"][0][0] += 1
         print("The Panama Canal is returned to its rightful owner.")
 
+
+    elif Card == "ABM Treaty":
+        changeDEFCON(1)
+        conductOperations(["R","S","I","C"], CARDS[Card] , Card, 4, True, False)
+
+
+    elif Card == "Brush War":
+        target = input("Enter a 2 stability country to Brush War:\n")
+    # USSR May not brush war Italy if NATO is active
+        while COUNTRIES[target][1] > 2 or (target == "Italy" and SITUATIONS["NATO"][0] == True and currentPlayer == 1):
+            target = input("INVALID TARGET. TOO HIGH STABILITY. Choose another country:\n") 
+
+        enemyDefense = 0
+        for adjEnemyCountry in COUNTRIES[target][-1]:
+            if COUNTRIES[adjEnemyCountry][4] == FACTION[otherPlayer]:
+                enemyDefense += 1
+
+        warResult = random.randint(1, 6)
+        print("DICE:" , str(warResult) )
+        if warResult > (2 + enemyDefense): # Victory
+            print("A guerilla squad funded by the %s has capitulated %s." % (FACTION[currentPlayer], target))
+            COUNTRIES[target][0][currentPlayer] += COUNTRIES[target][0][otherPlayer]
+            COUNTRIES[target][0][otherPlayer] = 0
+
+            earnVP(1, currentPlayer)
+
+        else: # Failure
+            print("The guerilla forces failed! Local resistance has driven the invaders out.")
+
+        MILOPS[currentPlayer] += 3
+
+
+    elif Card == "Arms Race":
+        if MILOPS[currentPlayer] > MILOPS[otherPlayer] and MILOPS[currentPlayer] >= DEFCON:
+            earnVP(3, currentPlayer)
+        elif MILOPS[currentPlayer] > MILOPS[otherPlayer]:
+            earnVP(1, currentPlayer)
+        else:
+            print("%s are not impressed by your military." % (FACTION[otherPlayer]) )
+
+
+    elif Card == "Cuban Missile Crisis":
+        DEFCON = 2
+        
+ 
 
     # Doublecheck influence situation with all countries
     checkControl(COUNTRIES, "All")
@@ -1945,9 +1988,10 @@ def spaceAction(operations, whatCondition):
             print("\n\n Space launch successful!" , SPACE[currentPlayer][0] , "has reached" , SPACE["Space Track"][currentMission][0] + "!")
             if pointsDue > 0:
                 print("The Americans earned +" + str(pointsDue) , "VP from" , SPACE["Space Track"][currentMission][0] + ".")
+                earnVP(pointsDue, 0)
             elif pointsDue < 0:
                 print("The Soviets earned +" + str(abs(pointsDue)) , "VP from" , SPACE["Space Track"][currentMission][0] + ".")
-            earnVP(pointsDue)
+                earnVP(pointsDue, 1)
 
         else: # Failure
             
@@ -2028,13 +2072,14 @@ def conductOperations(ActionsPermitted, card, cardName, cardOps, recursionDiscar
             chooseAction = input("ERROR. Invalid input. Only enter the first character of the action.\nSelect an action to take: ")
             chooseAction = chooseAction.upper()
 
+    # Bug -- As USA, triggering event and then using it for ops will instantly suffer -3 VP. Check must be done on NEXT turn 
         # We Will Bury You will occur before ANY action, unless it's an event. In such a case, check later if it's UN event
         if currentPlayer == 0 and SITUATIONS["'We Will Bury You'"][0] == True and chooseAction != "E": 
-            earnVP(-3)
+            earnVP(3, 1)
 
         # Flower Power gives 2 VP automatically to Soviets, unless spaced
         if currentPlayer == 0 and SITUATIONS["Flower Power"][0] == True and chooseAction != "S" and cardName[-3:] == "War": 
-            earnVP(-2)
+            earnVP(2, 1)
             print("Protests are occuring over the US's involvement in the %s.\n" % cardName)
             
         if chooseAction == "R":
@@ -2048,7 +2093,7 @@ def conductOperations(ActionsPermitted, card, cardName, cardOps, recursionDiscar
             if SITUATIONS["'We Will Bury You'"][0] == True and currentPlayer == 0 and cardName == "UN Intervention":
                 SITUATIONS["'We Will Bury You'"][0] = False
             elif SITUATIONS["'We Will Bury You'"][0] == True and currentPlayer == 0:
-                earnVP(-3)
+                earnVP(3, 1)
 
             removeCard = cardCode( cardName )
             if enemyEvent == True:
@@ -2204,7 +2249,7 @@ def coupAction(operations, coupType, cardName, eventCoup):
             pass
         else:
             print("DEFCON reduced to", str(DEFCON-1) +"!\n")
-            reduceDEFCON(1)
+            changeDEFCON(-1)
 
     if coupType != "Free":
         MILOPS[currentPlayer] += operations # Earn Milops if it wasn't a free coup
@@ -2379,11 +2424,15 @@ def acknowledgeAdjacency(currentPlayer):
 
     return legalCountries
 
-def reduceDEFCON(amount):
+def changeDEFCON(amount):
     global DEFCON
     
-    DEFCON -= amount
-    print("DEFCON REDUCED BY %d, NOW AT %d" % (amount, DEFCON))
+    DEFCON += amount
+    if amount > 0:
+        print("DEFCON IMPROVED BY %d, NOW AT %d" % (amount, DEFCON))
+    elif amount < 0:
+        print("DEFCON REDUCED BY %d, NOW AT %d" % (amount, DEFCON))
+
     if DEFCON <= 1:
         victoryCheck("DEFCON", "None")
 
@@ -2541,13 +2590,13 @@ def scoreRegion(Region):
     return VPtoBeAwarded
 
     
-def earnVP(amount):
+def earnVP(amount, currentPlayer):
     global VICTORYPOINTS
     VICTORYPOINTS += amount
-    if amount > 0:
+    if currentPlayer == 0 and amount > 0:
         print("The U.S.A. earned %d points. VP is now at %d." % (amount, VICTORYPOINTS) )
-    elif amount < 0:
-        print("The Soviet Union earned %d points. VP is now at %d." % (abs(amount), VICTORYPOINTS) )
+    elif currentPlayer == 1 and amount > 0:
+        print("The Soviet Union earned %d points. VP is now at %d." % (amount, VICTORYPOINTS) )
     elif amount == 0:
         print("Neither side has earned any points.")
         
@@ -2630,8 +2679,8 @@ random.shuffle(DRAW_PILE)
 checkControl(COUNTRIES, "All")
 maximumActions, handSize = 6, 8
 
-
-for Turn in range(1, 11):
+# in range(1, 11) is how it's supposed to be
+for Turn in range(4, 11):
     
     if Turn == 4:
         warStage = "Mid War"
@@ -2760,4 +2809,6 @@ for Turn in range(1, 11):
             SITUATIONS[situation][0] = False
             if situation == "Red Scare/Purge":
                 SITUATIONS[situation][1] = "None"
+
+    changeDEFCON(1)
 

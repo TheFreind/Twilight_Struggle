@@ -64,6 +64,8 @@ SITUATIONS = {
         "Shuttle Diplomacy":        [ False, "U.S.A.", "Permanent"],
         "Camp David Accords":       [ False, "U.S.A.", "Permanent"],
         "John Paul II Elected Pope":[ False, "U.S.A.", "Permanent"],
+        "Cuban Missile Crisis":     [ False, "None", "Temporary"],
+        "SALT Negotiations":        [ False, "None", "Temporary"],
 
         # Late War
         "AWACS Sale to Saudis":     [ False, "U.S.A.", "Permanent"],
@@ -1845,6 +1847,17 @@ def cardCode(Card):
 
     elif Card == "Cuban Missile Crisis":
         DEFCON = 2
+        SITUATIONS["Cuban Missile Crisis"][0] = True
+        SITUATIONS["Cuban Missile Crisis"][1] = FACTION[currentPlayer] # The Situation works in favor of current player
+        print("Tensions are forming around Cuba. Minutes to midnight...")
+
+
+    elif Card == "SALT Negotiations":
+        changeDEFCON(2)
+        SITUATIONS["SALT Negotiations"][0] == True
+        for index, card in enumerate(DISCARD_PILE):
+            print(" #d - %s" % (index+1, card) )
+        reclaimCard = input("\nEnter card # from discards to put in your hand:\n")
         
  
 
@@ -2218,6 +2231,10 @@ def coupAction(operations, coupType, cardName, eventCoup):
 
         doubleCheck -= 1
 
+    # CUBAN MISSILE CRISIS = Game Over, victory to opponent
+    if SITUATIONS["Cuban Missile Crisis"][0] == True and SITUATIONS["Cuban Missile Crisis"][1] == FACTION[otherPlayer]:
+        victoryCheck("Cuban Missile Crisis", FACTION[otherPlayer])
+
     ChinaCardBonus = 0 
     if cardName == "The China Card":
         if "Asia" in COUNTRIES[target][3]:
@@ -2428,12 +2445,17 @@ def changeDEFCON(amount):
     global DEFCON
     
     DEFCON += amount
+    if DEFCON > 5: # Maximum
+        DEFCON = 5
+    elif DEFCON < 1: # Minimum
+        DEFCON = 1
+
     if amount > 0:
         print("DEFCON IMPROVED BY %d, NOW AT %d" % (amount, DEFCON))
     elif amount < 0:
         print("DEFCON REDUCED BY %d, NOW AT %d" % (amount, DEFCON))
 
-    if DEFCON <= 1:
+    if DEFCON == 1:
         victoryCheck("DEFCON", "None")
 
     if DEFCON == 2 and SITUATIONS["NORAD"][0] == True and COUNTRIES["Canada"][-2] == "U.S.A.":
@@ -2605,6 +2627,7 @@ def earnVP(amount, currentPlayer):
     elif VICTORYPOINTS <= -20:
         victoryCheck("Victory Points", "Soviet Union")
 
+
 def victoryCheck(method, victor):
     
     if method == "Victory Points":
@@ -2624,7 +2647,7 @@ def victoryCheck(method, victor):
             victor = "U.S.A."
         
     elif method == "Cuban Missile Crisis":
-        pass
+        print(" \n\n ###### THE GAME HAS ENDED DUE TO A COUP! THE CUBAN MISSILE CRISIS CAUSES NUCLEAR ANNIHILATION! ######")
     
     elif method == "Europe Control":
         print(" \n\n ###### THE GAME HAS ENDED DUE TO EUROPE CONTROL! ######")
@@ -2783,21 +2806,76 @@ for Turn in range(4, 11):
 
         # Normal turn - select card to do one of 5 actions
         else:
-            cardNum = input("\n - Choose card # to play from hand:\n")
-            if CARDS["The China Card"][4] == False and cardNum == "China": # Input validation for using card. China Card may not be used if facedown.
-                while cardNum == "China" or (cardNum.isdigit() == False or int(cardNum) < 1 or int(cardNum) > len(HANDS[currentPlayer])):
+            # Cuban Missile Crisis prompt - give player a chance to remove it
+            if SITUATIONS["Cuban Missile Crisis"][0] == True and SITUATIONS["Cuban Missile Crisis"][1] == FACTION[otherPlayer]:
+                if currentPlayer == 0:
+                    print("\n !- WARNING - Cuban Missile Crisis. Enter [CMC] to remove 2 influence from West Germany or Turkey and end the Crisis.\n")
+                elif currentPlayer == 1:
+                    print("\n !- WARNING - Cuban Missile Crisis. Enter [CMC] to remove 2 influence from Cuba and end the Crisis.\n")
+
+            cardNum = input("\n - Choose card # to play from hand:\n") # Input validation for using card below. 
+            if CARDS["The China Card"][4] == False and cardNum == "China": # China Card may not be used if facedown.
+                while (cardNum == "China"
+                        or (cardNum == "CMC" and SITUATIONS["Cuban Missile Crisis"][0] == False or 
+                            (currentPlayer == 0 and COUNTRIES["Turkey"][0][0] < 2 and COUNTRIES["West Germany"][0][0] < 2) or
+                            (currentPlayer == 1 and COUNTRIES["Cuba"][0][1] < 2) )
+                        and (cardNum.isdigit() == False or int(cardNum) < 1 or int(cardNum) > len(HANDS[currentPlayer]))):
                     print("ERROR. Invalid input. Enter only the card's ordering number in your hand.")
                     cardNum = input("\n - Choose card # to play from hand:\n")
             else:
-                while cardNum != "China" and (cardNum.isdigit() == False or int(cardNum) < 1 or int(cardNum) > len(HANDS[currentPlayer])):
+                while ( cardNum != "China" and (cardNum != "CMC" or SITUATIONS["Cuban Missile Crisis"][0] == False or 
+                            (currentPlayer == 0 and COUNTRIES["Turkey"][0][0] < 2 and COUNTRIES["West Germany"][0][0] < 2) or
+                            (currentPlayer == 1 and COUNTRIES["Cuba"][0][1] < 2) ) 
+                        and (cardNum.isdigit() == False or int(cardNum) < 1 or int(cardNum) > len(HANDS[currentPlayer])) ):
                     print("ERROR. Invalid input. Enter only the card's ordering number in your hand.")
                     cardNum = input("\n - Choose card # to play from hand:\n")            
 
             if cardNum == "China":
                 cardName = "The China Card"
+            elif cardNum == "CMC":
+                if currentPlayer == 0:
+                    CMCinfluence = input("Enter [T] or [WG] to defuse the Cuban Missile Crisis:\n")
+                    CMCinfluence = CMCinfluence.upper()
+                    while ( (CMCinfluence != "T" or COUNTRIES["Turkey"][0][0] < 2) and 
+                        (CMCinfluence != "WG" or COUNTRIES["West Germany"][0][0] < 2) ):
+                        CMCinfluence = input("ERROR. Invalid input, or country does not have minimum 2 influence to lose. Try-again:\n")
+                        CMCinfluence = CMCinfluence.upper()
+
+                    if CMCinfluence == "T":
+                        COUNTRIES["Turkey"][0][0] -= 2
+                    elif CMCinfluence == "WG":
+                        COUNTRIES["West Germany"][0][0] -= 2
+
+                elif currentPlayer == 1:
+                    COUNTRIES["Cuba"][0][1] -= 2
+
+                SITUATIONS["Cuban Missile Crisis"][0] = False
+                SITUATIONS["Cuban Missile Crisis"][1] = "None"
+                print("The %s has defused the Cuban Missile Crisis!" % (FACTION[currentPlayer]) )
+
+        # Removing Cuban Missile Crisis influence was a free action. Now, the user picks an actual card to play.
+                cardNum = input("\n - Choose card # to play from hand:\n") # Input validation for using card below. 
+                if CARDS["The China Card"][4] == False and cardNum == "China": # China Card may not be used if facedown.
+                    while (cardNum == "China"
+                            or (cardNum == "CMC" and SITUATIONS["Cuban Missile Crisis"][0] == False or 
+                                (currentPlayer == 0 and COUNTRIES["Turkey"][0][0] < 2 and COUNTRIES["West Germany"][0][0] < 2) or
+                                (currentPlayer == 1 and COUNTRIES["Cuba"][0][1] < 2) )
+                            and (cardNum.isdigit() == False or int(cardNum) < 1 or int(cardNum) > len(HANDS[currentPlayer]))):
+                        print("ERROR. Invalid input. Enter only the card's ordering number in your hand.")
+                        cardNum = input("\n - Choose card # to play from hand:\n")
+                else:
+                    while ( cardNum != "China" and (cardNum != "CMC" or SITUATIONS["Cuban Missile Crisis"][0] == False or 
+                                (currentPlayer == 0 and COUNTRIES["Turkey"][0][0] < 2 and COUNTRIES["West Germany"][0][0] < 2) or
+                                (currentPlayer == 1 and COUNTRIES["Cuba"][0][1] < 2) ) 
+                            and (cardNum.isdigit() == False or int(cardNum) < 1 or int(cardNum) > len(HANDS[currentPlayer])) ):
+                        print("ERROR. Invalid input. Enter only the card's ordering number in your hand.")
+                        cardNum = input("\n - Choose card # to play from hand:\n")  
+
+                cardName = HANDS[currentPlayer][int(cardNum)-1] # Post-Cuban Crisis cardName
+
             else:
-                cardName = HANDS[currentPlayer][int(cardNum)-1]
-            card = CARDS[cardName]
+                cardName = HANDS[currentPlayer][int(cardNum)-1] # Normal cardName assignment
+            card = CARDS[cardName] # In all cases, get info for card
 
             conductOperations(["R","S","E","I","C"], card, cardName, card[1], False, True)
         swapSides("Swap") # Switch player order over at end of action round
@@ -2807,7 +2885,7 @@ for Turn in range(4, 11):
     for situation in SITUATIONS:    # Temporary situations that last for the turn are now removed
         if SITUATIONS[situation][2] == "Temporary" and SITUATIONS[situation][0] == True:
             SITUATIONS[situation][0] = False
-            if situation == "Red Scare/Purge":
+            if situation == "Red Scare/Purge" or situation == "Cuban Missile Crisis":
                 SITUATIONS[situation][1] = "None"
 
     changeDEFCON(1)

@@ -42,7 +42,7 @@ MILOPS = {
 # All on-going event effects from both powers are tracked here.
 # When they're in play, turn it on with "True". Faction whose event it belongs to. Permanent or expires on end of turn.
 SITUATIONS = {
-        # Early War
+        ## Early War
         "Vietnam Revolts":          [ False, "Soviet Union", "Temporary"],
         "De Gaulle Leads France":   [ False, "Soviet Union", "Permanent"],
         "Warsaw Pact Formed":       [ False, "Soviet Union", "Permanent"],
@@ -53,7 +53,7 @@ SITUATIONS = {
         "Formosan Resolution":      [ False, "U.S.A.", "Permanent"],
         "NORAD":                    [ False, "U.S.A.", "Permanent"],
         "Red Scare/Purge":          [ False, "None", "Temporary"],
-        # Mid War
+        ## Mid War
         "Breznev Doctrine":         [ False, "Soviet Union", "Temporary"],
         "'We Will Bury You'":       [ False, "Soviet Union", "Temporary"],
         "U2 Incident":              [ False, "Soviet Union", "Temporary"],
@@ -69,8 +69,11 @@ SITUATIONS = {
         "SALT Negotiations":        [ False, "None", "Temporary"],
         "Missile Envy":             [ False, "None", "Permanent"],
         "Latin American Death Squads":     [ False, "None", "Temporary"],
-
-        # Late War
+        ## Late War
+        "Iran-Contra Scandal":      [False, "Soviet Union", "Temporary"],
+        "Yuri and Samantha":        [False, "Soviet Union", "Temporary"],
+        "The Reformer":             [ False, "Soviet Union", "Permanent"],
+        "Iranian Hostage Crisis":   [False, "Soviet Union", "Permanent"],
         "AWACS Sale to Saudis":     [ False, "U.S.A.", "Permanent"],
         "North Sea Oil":            [ False, "U.S.A.", "Permanent"]
     }
@@ -1463,7 +1466,7 @@ def cardCode(Card):
             print(card)
         print("")
 
-        swapSides("Sovet Union")
+        swapSides("Soviet Union")
         conductOperations(["R","S","I","C"], CARDS[Card] , Card, 1, True, False)
         swapSides(FACTION[phasingPlayer])
 
@@ -2001,7 +2004,7 @@ def cardCode(Card):
             choice = input("Change DEFCON by 1. Increase DEFCON to %d, or reduce DEFCON to %d:\n" % (DEFCON + 1, DEFCON - 1))
             while int(choice) > (DEFCON + 1) or int(choice) < (DEFCON - 1):
                 choice = input("INVALID INPUT. Increase DEFCON to %d, or reduce DEFCON to %d:\n" % (DEFCON + 1, DEFCON - 1))
-            DEFCON = choice
+            DEFCON = int(choice)
             changeDEFCON(0)
 
             swapSides(FACTION[phasingPlayer])
@@ -2013,7 +2016,7 @@ def cardCode(Card):
             choice = input("Change DEFCON by 1. Increase DEFCON to %d, or reduce DEFCON to %d:\n" % (DEFCON + 1, DEFCON - 1))
             while int(choice) > (DEFCON + 1) or int(choice) < (DEFCON - 1):
                 choice = input("INVALID INPUT. Increase DEFCON to %d, or reduce DEFCON to %d:\n" % (DEFCON + 1, DEFCON - 1))
-            DEFCON = choice
+            DEFCON = int(choice)
             changeDEFCON(0)
 
             swapSides(FACTION[phasingPlayer])       
@@ -2021,8 +2024,253 @@ def cardCode(Card):
             print("No major compromises or changes have been made to the status quo from the Summit.")     
 
 
-        
+    #### LATEWAR CARDS ####
+    elif Card == "Glasnost":
+        changeDEFCON(1)
+        earnVP(2, 1)
+        if SITUATIONS["The Reformer"][0] == True:
+            swapSides("Soviet Union")
+            conductOperations(["R","I"], CARDS[Card], Card, 4, True, False)
+            print("Gorbachev implemented economic reforms for the USSR.")
+            swapSides(FACTION[phasingPlayer])
+
+
+    elif Card == "Iranian Hostage Crisis":
+        COUNTRIES["Iran"][0][0] = 0
+        COUNTRIES["Iran"][0][1] += 2
+        SITUATIONS["Iranian Hostage Crisis"][0] = True
+        print("The US embassy in Iran is in shambles!")
+
+
+    elif Card == "The Reformer":
+        swapSides("Soviet Union")
+        SITUATIONS["The Reformer"][0] = True
+
+        addedCountries = []
+        if VICTORYPOINTS < 0:       # 6 USSR Influence from Reformer if USSR is leading in VP
+            influenceMarkers = 6 
+        else:
+            influenceMarkers = 4    # 4 Otherwise
+
+        for markers in range(influenceMarkers):
+            doubleCheck = 1
+            print("Add 1 Soviet influence to any country in Europe, max 2 per country. ("+str((influenceMarkers+1)-markers),"remaining):")
+            target = input("Enter country name: ")
+            while doubleCheck > 0: # 
+
+                if target not in COUNTRIES.keys():
+                    print("ERROR. COUNTRY NOT FOUND. TRY AGAIN. \n")
+                    target = input("Enter country name: ")
+                    doubleCheck += 1
+
+                elif "Europe" not in COUNTRIES[target][3]:
+                    print("ERROR. That country is not in Europe. Try another.\n")
+                    target = input("Enter country name: ")
+                    doubleCheck += 1
+                    
+                elif addedCountries.count(target) >= 2:
+                    print("ERROR. You've added the limit of 2 USSR influence to %s. Try another.\n" % (target))
+                    target = input("Enter country name: ")
+                    doubleCheck += 1
+
+                doubleCheck -= 1
+                
+            COUNTRIES[target][0][1] += 1
+            addedCountries.append(target)
+            checkControl(COUNTRIES, target)   
+
+        print("The new Soviet Premier shines a new trajectory for the nation.")
+        swapSides(FACTION[phasingPlayer])     
+
+
+    elif Card == "Aldrich Ames Remix":
+        print("|-/ A man with no allegiance and dangerous skills makes an offer: \-|")
+        for index, card in enumerate(HANDS[0]):
+            print("#%d - %s" % (index+1, card))
+        print("")
+
+        swapSides("Soviet Union")
+        choice = input(" Discard a card from the US's hand by selecting its number:\n")
+        while choice.isdigit == False or (int(choice) < 1 and len(HANDS[0]) > 0) or int(choice) > len(HANDS[0]):
+            choice = input(" ERROR - INVALID INPUT. Discard a card from the US's hand by selecting its number:\n")
+
+        choice = int(choice-1) # Turn user choice into proper index
+        cardName = HANDS[0][choice]
+
+        swapSides("U.S.A.") # Quickly swap over to discard US's card
+        discardCard(cardName, False, False)
+        swapSides(FACTION[phasingPlayer]) 
+
+
+        swapSides(FACTION[phasingPlayer])  # End of Soviet's card
+
+
+    elif Card == "Pershing II Deployed":
+        swapSides("Soviet Union")
+        earnVP(1, 1)
+
+        validCountries = []
+        for westernEuropeCountry in COUNTRIES:
+            if (COUNTRIES[westernEuropeCountry][0][0] > 0 and 
+                "Western Europe" in COUNTRIES[westernEuropeCountry][3]):
+                validCountries.append( westernEuropeCountry )
+                    
+        if len(validCountries) < 3:
+            x = len(validCountries)
+        else:
+            x = 3
+
+        print(CARDS[Card][0])
+        for attempt in range(x):
+            if len(validCountries) > 0:
+                target = input("Enter country name: ")
+                while target not in validCountries: 
+                    print("ERROR. That is not a country in Western Europe. Try another.\n")
+                    target = input("Enter country name: ")          
+
+                COUNTRIES[target][0][0] -= 1
+
+        swapSides(FACTION[phasingPlayer])
+
+
+    elif Card == "Marine Barracks Bombing":
+        swapSides("Soviet Union")
+        COUNTRIES["Lebanon"][0][0] = 0
+
+        for markers in range(2):
+
+            doubleCheck = 1
+            print("Remove 2 US influence from countries in the Middle East. ("+str(2-markers),"remaining):")
+            target = input("Enter country name: ")
+            while doubleCheck > 0: # 
+
+                if target not in COUNTRIES.keys():
+                    print("ERROR. COUNTRY NOT FOUND. TRY AGAIN. \n")
+                    target = input("Enter country name: ")
+                    doubleCheck += 1
+
+                elif "Middle East" not in COUNTRIES[target][3]:
+                    print("ERROR. That country is not in the Middle East. Try another.\n")
+                    target = input("Enter country name: ")
+                    doubleCheck += 1
+
+                elif COUNTRIES[target][0][0] == 0:
+                    print("ERROR. There is no US influence in that country. Try another.\n")
+                    target = input("Enter country name: ")
+                    doubleCheck += 1
+
+                doubleCheck -= 1
+                
+            COUNTRIES[target][0][0] -= 1
+            checkControl(COUNTRIES, target)        
+
+
+        swapSides(FACTION[phasingPlayer])
+                   
+
+    elif Card == "Ortega Elected in Nicaragua":
+        swapSides("Soviet Union")
+        COUNTRIES["Nicaragua"][0][0] = 0
+
+        print(COUNTRIES["Nicaragua"][-1])
+        print("Conduct a free coup against any adjacent country to Nicaragua with this card's Ops value.")
+        coupAction(2, "Free", Card, True)
+
+        swapSides(FACTION[phasingPlayer])
+
+
+    elif Card == "Iran-Contra Scandal":
+        SITUATIONS["Iran-Contra Scandal"][0] = True
+        print("The world criticizes the U.S. for its Iran-Contra scandal.")
+
  
+    elif Card == "Latin American Debt Crisis":
+        swapSides("U.S.A.")
+        for count, card in enumerate(HANDS[currentPlayer]):
+            if CARDS[card][2] == "U.S.A.":
+                print("#%d -- %d *.* %s" % (count+1, CARDS[card][1], card))
+            elif CARDS[card][2] == "Soviet Union":
+                print("#%d -- %d |-/ %s" % (count+1, CARDS[card][1], card))
+            elif CARDS[card][2] == "Neutral":
+                print("#%d -- %d === %s" % (count+1, CARDS[card][1], card))
+
+        repeating = True
+
+        print("\n*.* US, you must discard a card of 3+ Op value, or the USSR will double influence in 2 South American Countries. *.*")
+        while repeating:
+            chooseCard = input("Choose card # to discard, OR [D]o not discard.\n")
+            
+            if chooseCard.isdigit() == True:
+                if int(chooseCard)-1 < 1 or int(chooseCard)-1 > len(HANDS[currentPlayer]):
+                    print("ERROR. That is not a valid card number. Try again.")
+                    chooseCard = input("Choose card # to discard, OR [D]o not discard.\n")
+
+            # US Discards card to avoid effect
+                elif CARDS[HANDS[currentPlayer][int(chooseCard)-1]][1] >= 3:
+                    cardNameLatinDebt = HANDS[currentPlayer][int(chooseCard)-1]
+                    discardCard(cardNameLatinDebt, False, False)
+                    print("The Allies have invested %s to alleviate the debt crisis in Latin America!" % (cardNameLatinDebt))
+                    repeating = False
+                
+            else:
+                if chooseCard != "D" and chooseCard != "d":
+                    print("ERROR. That is not the discard command. Try again.")
+                    chooseCard = input("Choose card # to discard, OR [D]o not discard.\n")
+
+            # Debt Crisis doubles influence in Latin America
+                else: 
+                    swapSides("Soviet Union")
+                    validCountries = []
+                    for southAmericanCountry in COUNTRIES:
+                        if (COUNTRIES[southAmericanCountry][0][1] > 0 and 
+                            "South America" in COUNTRIES[southAmericanCountry][3]):
+                            validCountries.append( southAmericanCountry )
+                                
+                    if len(validCountries) < 2:
+                        x = len(validCountries)
+                    else:
+                        x = 2
+
+                    if x > 0:
+                        for markers in range(x):
+
+                            doubleCheck = 1
+                            print("Double influence in 2 South American Countries. ("+str(2-markers),"remaining):")
+                            target = input("Enter country name: ")
+                            while doubleCheck > 0: # 
+
+                                if target not in COUNTRIES.keys():
+                                    print("ERROR. COUNTRY NOT FOUND. TRY AGAIN. \n")
+                                    target = input("Enter country name: ")
+                                    doubleCheck += 1
+
+                                elif "South America" not in COUNTRIES[target][3]:
+                                    print("ERROR. That country is not in the South America. Try another.\n")
+                                    target = input("Enter country name: ")
+                                    doubleCheck += 1
+
+                                elif COUNTRIES[target][0][1] == 0:
+                                    print("ERROR. There is no Soviet Influence in that country. Try another.\n")
+                                    target = input("Enter country name: ")
+                                    doubleCheck += 1
+
+                                doubleCheck -= 1
+                                
+                            COUNTRIES[target][0][1] = 2 * COUNTRIES[target][0][1]
+                            checkControl(COUNTRIES, target)   
+
+                    else:
+                        print("There is no Soviet influence in South America.")                  
+
+                    swapSides(FACTION[phasingPlayer])
+                    repeating = False                                        
+
+        swapSides(FACTION[phasingPlayer])
+
+
+    elif Card == "Yuri and Samantha":
+        SITUATIONS["Yuri and Samantha"][0] = True
+        print("The US is hesitant to conduct violent coups whilst a girl is on the forefront of the news.")
 
     # Doublecheck influence situation with all countries
     checkControl(COUNTRIES, "All")
@@ -2102,6 +2350,11 @@ def realignmentAction(operations, cardName, cardEvent):
             USA_modifier += 1
         elif COUNTRIES[target][0][1] > COUNTRIES[target][0][0]:
             RUSSIA_modifier += 1
+
+       # Iran-Contra Scandal improves USSR realignments
+        if SITUATIONS["Iran-Contra Scandal"][0] == True and USA_modifier >= 1:
+            USA_modifier -= 1
+
                 
         print("USA:" , USA_modifier) #
         print("RUSSIA", RUSSIA_modifier) #
@@ -2405,13 +2658,24 @@ def coupAction(operations, coupType, cardName, eventCoup):
             else:
                 print("WARNING: NATO IN EFFECT. USSR MAY NOT COUP/REALIGN IN EUROPE. RE-TRY: \n")
                 target = input("Choose target country to coup: \n")
-                doubleCheck += 1            
+                doubleCheck += 1    
+
+        # 'The Reformer' prevents USSR from couping Europe
+        if currentPlayer == 1 and "Europe" in COUNTRIES[target][3] and SITUATIONS["The Reformer"][0] == True: 
+            print("ERROR. USSR MAY NOT COUP IN EUROPE ANYMORE DUE TO HAVING BEEN REFORMED. RE-TRY: \n")
+            target = input("Choose target country to coup: \n")
+            doubleCheck += 1        
 
         # Che's coups are just like normal ones - but with additional restrictions and a parameter
         if cardName == "Che" and eventCoup == True and (COUNTRIES[target][2] == True or 
             "Europe" in COUNTRIES[target][3] or "Asia" in COUNTRIES[target][3] or "Middle East" in COUNTRIES[target][3]):
             print("ERROR. Che cannot lead a revolution in %s. Re-try:" % target)
             target = input("Choose target country to coup: \n")
+            doubleCheck += 1
+
+        # Ortega coup only in adjacent countries
+        if cardName == "Ortega Elected in Nicaragua" and eventCoup == True and (target not in COUNTRIES["Nicaragua"][-1]):
+            target = input("ERROR. That is not a country adjacent to Nicaragua for Ortega. Try-again:\n")
             doubleCheck += 1
 
         # Junta coups only in CA/SA
@@ -2644,7 +2908,7 @@ def acknowledgeAdjacency(currentPlayer):
 
 def changeDEFCON(amount):
     global DEFCON
-    
+
     DEFCON += amount
     if DEFCON > 5: # Maximum
         DEFCON = 5

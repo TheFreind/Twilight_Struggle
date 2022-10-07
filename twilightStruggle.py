@@ -70,12 +70,17 @@ SITUATIONS = {
         "Missile Envy":             [ False, "None", "Permanent"],
         "Latin American Death Squads":     [ False, "None", "Temporary"],
         ## Late War
-        "Iran-Contra Scandal":      [False, "Soviet Union", "Temporary"],
-        "Yuri and Samantha":        [False, "Soviet Union", "Temporary"],
+        "Iran-Contra Scandal":      [ False, "Soviet Union", "Temporary"],
+        "Yuri and Samantha":        [ False, "Soviet Union", "Temporary"],
         "The Reformer":             [ False, "Soviet Union", "Permanent"],
-        "Iranian Hostage Crisis":   [False, "Soviet Union", "Permanent"],
+        "Iranian Hostage Crisis":   [ False, "Soviet Union", "Permanent"],
+        "Chernobyl":                [ False, "U.S.A.", "Continent", "Temporary"], # US chooses region for Chernobyl
         "AWACS Sale to Saudis":     [ False, "U.S.A.", "Permanent"],
-        "North Sea Oil":            [ False, "U.S.A.", "Permanent"]
+        "North Sea Oil":            [ False, "U.S.A.", "Permanent"],
+        "The Iron Lady":            [ False, "U.S.A.", "Permanent"],
+        "'An Evil Empire'":         [ False, "U.S.A.", "Permanent"],
+        "Tear Down This Wall":      [ False, "U.S.A.", "Permanent"]
+
     }
 
 # Countries in Twilight Struggle. Organized by region, where battlefields come first.
@@ -577,43 +582,47 @@ def cardCode(Card):
 
 
     elif Card == "Socialist Governments":
-        swapSides("Soviet Union")
-        
-        addedCountries = []
-        for markers in range(3):
-
-            doubleCheck = 1
-            print("Remove 1 US influence from any country in Western Europe, max 2 per country. ("+str(3-markers),"remaining):")
-            target = input("Enter country name: ")
-            while doubleCheck > 0: # 
-
-                if target not in COUNTRIES.keys():
-                    print("ERROR. COUNTRY NOT FOUND. TRY AGAIN. \n")
-                    target = input("Enter country name: ")
-                    doubleCheck += 1
-
-                elif "Western Europe" not in COUNTRIES[target][3]:
-                    print("ERROR. That country is not in Western Europe. Try another.\n")
-                    target = input("Enter country name: ")
-                    doubleCheck += 1
-
-                elif COUNTRIES[target][0][0] == 0:
-                    print("ERROR. There is no US influence in that country. Try another.\n")
-                    target = input("Enter country name: ")
-                    doubleCheck += 1
-                    
-                elif addedCountries.count(target) >= 2:
-                    print("ERROR. You've removed the limit of 2 US influence from %s. Try another.\n" % (target))
-                    target = input("Enter country name: ")
-                    doubleCheck += 1
-
-                doubleCheck -= 1
-                
-            COUNTRIES[target][0][0] -= 1
-            addedCountries.append(target)
-            checkControl(COUNTRIES, target)
+        if SITUATIONS["The Iron Lady"][0] != True:      # Iron Lady prevents Soc Govs
+            swapSides("Soviet Union")
             
-        swapSides(FACTION[phasingPlayer])     
+            addedCountries = []
+            for markers in range(3):
+
+                doubleCheck = 1
+                print("Remove 1 US influence from any country in Western Europe, max 2 per country. ("+str(3-markers),"remaining):")
+                target = input("Enter country name: ")
+                while doubleCheck > 0: # 
+
+                    if target not in COUNTRIES.keys():
+                        print("ERROR. COUNTRY NOT FOUND. TRY AGAIN. \n")
+                        target = input("Enter country name: ")
+                        doubleCheck += 1
+
+                    elif "Western Europe" not in COUNTRIES[target][3]:
+                        print("ERROR. That country is not in Western Europe. Try another.\n")
+                        target = input("Enter country name: ")
+                        doubleCheck += 1
+
+                    elif COUNTRIES[target][0][0] == 0:
+                        print("ERROR. There is no US influence in that country. Try another.\n")
+                        target = input("Enter country name: ")
+                        doubleCheck += 1
+                        
+                    elif addedCountries.count(target) >= 2:
+                        print("ERROR. You've removed the limit of 2 US influence from %s. Try another.\n" % (target))
+                        target = input("Enter country name: ")
+                        doubleCheck += 1
+
+                    doubleCheck -= 1
+                    
+                COUNTRIES[target][0][0] -= 1
+                addedCountries.append(target)
+                checkControl(COUNTRIES, target)
+                
+            swapSides(FACTION[phasingPlayer])  
+
+        else:
+            print("Thatcher's uncompromising nature has given Europe pause to socialist ideas.")
 
 
     elif Card == "Suez Crisis":
@@ -1325,9 +1334,13 @@ def cardCode(Card):
 
 
     elif Card == "Flower Power":
-        SITUATIONS["Flower Power"][0] = True
-        print("Pacifist factions within the U.S. are protesting violence in war.")
-    # HAVE NOT ADDED CODE FOR FLOWER POWER TO WORK PROPERLY
+        if SITUATIONS["'An Evil Empire'"] == True:      # An Evil Empire denies Flower Power
+            SITUATIONS["'An Evil Empire'"][0] = False
+            cardConditionTriggered = False
+            print("Reagan:'Y'all are some massive commies, quit smoking that pot already!'")
+        else:
+            SITUATIONS["Flower Power"][0] = True
+            print("Pacifist factions within the U.S. are protesting violence in war.")
 
 
     elif Card == "Quagmire":
@@ -1416,10 +1429,14 @@ def cardCode(Card):
 
 
     elif Card == "Willy Brandt":
-        earnVP(1, 1)
-        COUNTRIES["West Germany"][0][1] += 1
-        SITUATIONS["Willy Brandt"][0] = True
-        print("Willy Brandt promises the reunification of Germany!")
+        if SITUATIONS["Tear Down This Wall"][0] != True:
+            earnVP(1, 1)
+            COUNTRIES["West Germany"][0][1] += 1
+            SITUATIONS["Willy Brandt"][0] = True
+            print("Willy Brandt promises the reunification of Germany!")
+        else:
+            print("Reagan's speech at the Berlin Wall has invigorated a different kind of hope.")
+            cardConditionTriggered = False
     
 
     elif Card == "Liberation Theology":
@@ -1865,9 +1882,10 @@ def cardCode(Card):
 
         for index, card in enumerate(DISCARD_PILE):
             print(" #%d - %s" % (index+1, card) )
-        reclaimCard = input("\nEnter card # from discards to put in your hand:\n")
-        while reclaimCard.isdigit() == False or int(reclaimCard) < 1 or int(reclaimCard) > len(DISCARD_PILE):
-            reclaimCard = input("\nERROR: Invalid input. Enter card # from discards to put in your hand:\n")
+        reclaimCard = input("\nEnter non-scoring card # from discards to put in your hand:\n")
+        while (reclaimCard.isdigit() == False or DISCARD_PILE[int(reclaimCard)-1][-7:] == "Scoring" or 
+                int(reclaimCard) < 1 or int(reclaimCard) > len(DISCARD_PILE)    ):
+            reclaimCard = input("\nERROR: Invalid input. Enter non-scoring card # from discards to put in your hand:\n")
 
         cardName = DISCARD_PILE.pop(int(reclaimCard)-1)
         HANDS[currentPlayer].append(cardName)
@@ -2272,6 +2290,124 @@ def cardCode(Card):
         SITUATIONS["Yuri and Samantha"][0] = True
         print("The US is hesitant to conduct violent coups whilst a girl is on the forefront of the news.")
 
+
+  #### US LATE WAR CARDS #####
+    elif Card == "Soviets Shoot Down KAL-007":
+        changeDEFCON(-1)
+        earnVP(2, 0)
+        if COUNTRIES["South Korea"][4] == "U.S.A.":
+            swapSides("U.S.A.")
+            conductOperations(["R","I"], CARDS[Card], Card, 4, True, False)
+            print("The world holds its breath, partially for the dead, partially for the United States.")
+            swapSides(FACTION[phasingPlayer])
+
+
+    elif Card == "The Iron Lady":
+        print("\nThatcher takes up helm in the UK.")
+        COUNTRIES["Argentina"][0][1] += 1
+        COUNTRIES["UK"][0][1] = 0
+        SITUATIONS["The Iron Lady"][0] = True
+        earnVP(1, 0)
+
+
+    # INCOMPLETE - There is not yet any code for a "8th turn"
+    elif Card == "North Sea Oil":
+        SITUATIONS["North Sea Oil"][0] = True
+        NORTHSEAOILTURN = TURN
+        print("Supplementary oil reserves have been found in the North Sea!")
+
+
+    elif Card == "Chernobyl":
+        swapSides("U.S.A.")
+        regions = ["Europe", "Asia", "Middle East", "Africa", "South America", "Central America"]
+        regionChoice = input("*.* Select Region to prevent USSR from placing inflence in: *.*\n")
+        while regionChoice not in regions:
+            regionChoice = input("ERROR. INVALID INPUT. Select Region to prevent USSR from placing inflence in:\n")
+
+        SITUATIONS["Chernobyl"][0] = True
+        SITUATIONS["Chernobyl"][2] = regionChoice
+        print("Chernobyl has contaminated %s!" % (regionChoice) )
+
+        swapSides(FACTION[phasingPlayer])
+
+
+    elif Card == "Tear Down This Wall":
+        swapSides("U.S.A.")
+        COUNTRIES["East Germany"][0][0] += 3
+
+        choice = input("Perform a [C]oup or [R]ealignment action in Europe:\n")
+        while choice != "C" and choice != "c" and choice != "R" and choice != "r":
+            choice = input("INPUT ERROR. Enter [C] or [R]:\n")
+
+        if choice == "C" or choice == "c":
+            coupAction(3, "Free", Card, "Tear Down This Wall")
+        elif choice == "R" or choice == "r":
+            realignmentAction(3, Card, "Tear Down This Wall")
+
+
+        if SITUATIONS["Willy Brandt"][0] == True:
+            SITUATIONS["Willy Brandt"][0] = False
+        else:
+            SITUATIONS["Tear Down This Wall"][0] = True
+
+        print("'Mr. Gorbachev, if you seek peace; if you seek liberalization; if you seek freedom...'")
+
+        swapSides(FACTION[phasingPlayer])
+
+
+    elif Card == "'An Evil Empire'":
+        earnVP(1, 0)
+        if SITUATIONS["Flower Power"][0] == True:
+            SITUATIONS["Flower Power"][0] = False
+        else:
+            SITUATIONS["'An Evil Empire'"][0] = True
+        print("'Communism is a disease.'")
+
+    
+    elif Card == "AWACS Sale to Saudis":
+        SITUATIONS["AWACS Sale to Saudis"][0] = True
+        COUNTRIES["Saudi Arabia"][0][0] += 2
+
+
+    elif Card == "Solidarity":
+        if SITUATIONS["John Paul II Elected Pope"][0] == True:
+            COUNTRIES["Poland"][0][0] += 3
+            print("The Polish are staging an uprising!")
+        
+        else:
+            print("The resistance movement fails to find public support, and retreats into obscurity.")
+
+
+    elif Card == "Reagan Bombs Libya":
+        bombingVP = math.floor( (COUNTRIES["Libya"][0][1] / 2) )
+        earnVP(bombingVP, 0)
+
+
+    elif Card == "Star Wars":
+        if SPACE[0][1] > SPACE[1][1]:
+            for index, card in enumerate(DISCARD_PILE):
+                print(" #%d - %s" % (index+1, card) )
+
+            reclaimCard = input("\nEnter non-scoring card # from discards to immediately play as an event:\n")
+            while (reclaimCard.isdigit() == False or DISCARD_PILE[int(reclaimCard)-1][-7:] == "Scoring" or
+                    int(reclaimCard) < 1 or int(reclaimCard) > len(DISCARD_PILE)   ):
+                reclaimCard = input("\nERROR: Invalid input. Enter non-scoring card # from discards to immediately play as an event:\n")
+
+            cardName = DISCARD_PILE[int(reclaimCard)-1]
+            x = cardCode(cardName)
+            print("The Star Wars initiative has highlighted %s." % (cardName) )
+
+
+    ## NEUTRAL LATE WAR CARDS ##
+    elif Card == "Wargames":
+        if DEFCON == 2:
+            choice = input("Wargames: [E]nd the game, or [C]ontinue playing:\n")
+            while choice != "E" and choice != "e" and choice != "C" and choice != "c":
+                choice = input("ERROR. Enter [E], or [C]:\n")
+
+            
+
+
     # Doublecheck influence situation with all countries
     checkControl(COUNTRIES, "All")
     if CARDS[Card][-1] == True and cardConditionTriggered == True:
@@ -2302,12 +2438,16 @@ def realignmentAction(operations, cardName, cardEvent):
                 target = input("Choose target country to realign: \n")
                 doubleCheck += 1
 
-            if    ( (DEFCON < 5 and "Europe" in COUNTRIES[target][3]) or
-                    (DEFCON < 4 and "Asia" in COUNTRIES[target][3]) or
-                    (DEFCON < 3 and "Middle East" in COUNTRIES[target][3]) ):
-                print("DEFCON DENIED. YOU MAY NOT COUP/REALIGN IN THIS REGION. RE-TRY: \n")
-                target = input("Choose target country to realign: \n")
-                doubleCheck += 1
+        # DEFCON Restricts realigning in these regions
+            if cardEvent == "Tear Down This Wall" and "Europe" in COUNTRIES[target][3]:    # Tear Down This Wall gives free realigns in Europe     
+                pass
+            else:
+                if    ( (DEFCON < 5 and "Europe" in COUNTRIES[target][3]) or
+                        (DEFCON < 4 and "Asia" in COUNTRIES[target][3]) or
+                        (DEFCON < 3 and "Middle East" in COUNTRIES[target][3]) ):
+                    print("DEFCON DENIED. YOU MAY NOT COUP/REALIGN IN THIS REGION. RE-TRY: \n")
+                    target = input("Choose target country to realign: \n")
+                    doubleCheck += 1
 
             # If using Junta event, only American countries available for realignment
             if cardEvent == "Junta" and "America" not in COUNTRIES[target][3]:
@@ -2580,7 +2720,10 @@ def influenceAction(operations, legalCountries, cardName):
             target = input("ERROR. COUNTRY NOT FOUND. TRY AGAIN: \n")
 
         while ChinaInfluence == True and "Asia" not in COUNTRIES[target][3]: # 5th influence from China Card must go to Asia
-            target = input("ERROR. BONUS INFLUENCE FROM CHINA CARD CAN ONLY BE PLACED IN ASIA: \n")        
+            target = input("ERROR. BONUS INFLUENCE FROM CHINA CARD CAN ONLY BE PLACED IN ASIA: \n")     
+
+        while currentPlayer == 1 and SITUATIONS["Chernobyl"][0] == True and COUNTRIES[target][3] in SITUATIONS["Chernobyl"][2]:
+            target = input("WARNING: CHERNOBYL RADIATION HAS CONTAMINATED THAT REGION. CHOOSE ANOTHER COUNTRY:\n")   
 
         possible = False
         while possible == False:
@@ -2642,12 +2785,16 @@ def coupAction(operations, coupType, cardName, eventCoup):
             target = input("Choose target country to coup: \n")
             doubleCheck += 1
 
-        if    ( (DEFCON < 5 and "Europe" in COUNTRIES[target][3]) or
-                (DEFCON < 4 and "Asia" in COUNTRIES[target][3]) or
-                (DEFCON < 3 and "Middle East" in COUNTRIES[target][3]) ) and coupType != "Free":
-            print("DEFCON RESTRICTED. YOU MAY NOT COUP/REALIGN IN THIS REGION. RE-TRY: \n")
-            target = input("Choose target country to coup: \n")
-            doubleCheck += 1
+    # DEFCON Restricts coup targets in these regions
+        if eventCoup == "Tear Down This Wall" and "Europe" in COUNTRIES[target][3]:    # Tear Down This Wall gives a free coup in Europe     
+            pass
+        else:
+            if    ( (DEFCON < 5 and "Europe" in COUNTRIES[target][3]) or
+                    (DEFCON < 4 and "Asia" in COUNTRIES[target][3]) or
+                    (DEFCON < 3 and "Middle East" in COUNTRIES[target][3]) ) and coupType != "Free":
+                print("DEFCON RESTRICTED. YOU MAY NOT COUP/REALIGN IN THIS REGION. RE-TRY: \n")
+                target = input("Choose target country to coup: \n")
+                doubleCheck += 1
 
         # NATO prevents couping in Europe. De Gaulle and Willy Brandt are exceptions, if they are active.
         if currentPlayer == 1 and "Europe" in COUNTRIES[target][3] and SITUATIONS["NATO"][0] == True:
@@ -2690,6 +2837,10 @@ def coupAction(operations, coupType, cardName, eventCoup):
     # CUBAN MISSILE CRISIS = Game Over, victory to opponent
     if SITUATIONS["Cuban Missile Crisis"][0] == True and SITUATIONS["Cuban Missile Crisis"][1] == FACTION[otherPlayer]:
         victoryCheck("Cuban Missile Crisis", FACTION[otherPlayer])
+
+    # Soviets earn 1 VP from American Coups due to Yuri & Samantha
+    if currentPlayer == 0 and SITUATIONS["Yuri and Samantha"][0] == True:
+        earnVP(1, 1)
 
     ChinaCardBonus = 0 
     if cardName == "The China Card":
@@ -3160,6 +3311,8 @@ def victoryCheck(method, victor):
 
 
 ######### GAMEPLAY ########
+TURN = 1
+
 HANDS = {
         0: [],
         1: ["Summit"]
@@ -3180,7 +3333,8 @@ maximumActions, handSize = 6, 8
 
 # in range(1, 11) is how it's supposed to be
 for Turn in range(4, 11):
-    
+    TURN = Turn
+
     if Turn == 4:
         warStage = "Mid War"
         maximumActions, handSize = 7, 9      # Players now take 7 actions, and draw +1
@@ -3367,7 +3521,7 @@ for Turn in range(4, 11):
     CARDS["The China Card"][4] = True # Flip China Card
 
     for situation in SITUATIONS:    # Temporary situations that last for the turn are now removed
-        if SITUATIONS[situation][2] == "Temporary" and SITUATIONS[situation][0] == True:
+        if SITUATIONS[situation][-1] == "Temporary" and SITUATIONS[situation][0] == True:
             SITUATIONS[situation][0] = False
             if situation == "Red Scare/Purge" or situation == "Cuban Missile Crisis":
                 SITUATIONS[situation][1] = "None"
